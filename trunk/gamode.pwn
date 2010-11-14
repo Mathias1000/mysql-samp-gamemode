@@ -1,4 +1,4 @@
-
+#include <F_Streamer>
 #include <a_samp>
 #include <mysql>
 #include <sscanf2>
@@ -8,10 +8,10 @@
 #define player_RegLog_DialogID 1
 #include <MapIconStreamer>
 #define dcmd(%1,%2,%3) if (!strcmp((%3)[1], #%1, true, (%2)) && ((((%3)[(%2) + 1] == '\0') && (dcmd_%1(playerid, ""))) || (((%3)[(%2) + 1] == ' ') && (dcmd_%1(playerid, (%3)[(%2) + 2]))))) return 1
-
+#include <time>
 
 #define COLOR_WHITE 0xFFFFFFAA
-
+#define COLOR_RED 0xFFFFFFAA
 #define MAX_BLITZER 15 // Maximale Anzahl von Blitzern
 #define BLITZER_TIMER_INTERVALL 500 // Intervall fÃ¼r das Blitzen (in Milliesekunden)
 #define BLITZER_PAUSE 2 // Anzahl der Minuten, in denen der Spieler nicht mehr geblitzt werden kann
@@ -31,12 +31,17 @@
 #define Login_Button1 "Login"
 #define Login_Button2 "Abrechen"
 #define Logintitle "Login"
-
+#define List 3
 #define regtext "Willkommen"
 #define reg_Button1 "Register"
 #define reg_Button2 "Abrechen"
 #define regtitle "REGESTRATION"
 //new Text:SPEEDOS[MAX_PLAYERS];
+
+//fowards
+forward Worldtime(playerid);
+forward timebancheck(playerid);
+
 enum Ammo
 {
 ammo1,
@@ -94,6 +99,8 @@ Loginergebnis
 }
 enum pInfo
 {
+idplayer,
+Logged,
 Team,
 Autoschein,
 Flugschein,
@@ -127,6 +134,7 @@ new vehiclesresult[MAX_RESULT];
 new Blizterresult[MAX_RESULT];
 new playerclassresul[MAX_RESULT];
 //query varis
+//new query[MAX_QUERY];
 new objectsql[MAX_QUERY];
 new playersql[MAX_QUERY];
 new vehiclessql[MAX_QUERY];
@@ -138,40 +146,160 @@ new checkpasswordsql[MAX_QUERY];
 new saveplayer1[MAX_QUERY];
 new insertvihcles[MAX_QUERY];
 new checkplayersql[MAX_QUERY];
+new teleportcoords[MAX_QUERY];
+new delloc[MAX_QUERY];
+new Selectban[MAX_QUERY];
+new addloc[MAX_QUERY];
+//max strings
 new Updateplayer[MAX_STRING];
 new Updateweapons[MAX_STRING];
+new playerlogged[MAX_STRING];
+new playerloggedsrc[MAX_STRING];
+//another
+new Menu:Navimenu;
+new Area_tele[64];
+new Text:Time, Text:Date;
+new gPlayerName[MAX_PLAYERS][MAX_PLAYER_NAME],gPlayerIP[MAX_PLAYERS][16];
+
 main()
 {
 print("\n----------------------------------");
 print(" Blank Gamemode by your name here");
 print("----------------------------------\n");
 }
-
+public OnFilterScriptExit()
+{
+	for(new objectid; objectid<F_MAX_OBJECTS; objectid++)
+	{
+	    F_DestroyObject(objectid);
+	}
+	F_ObjectUpdate(false);
+	return 1;
+}
 
 public OnGameModeInit()
 {
-
+Navimenu = CreateMenu("Navi Menu", 1, 150.0, 150.0, 150.0, 150.0);
+AddMenuItem(Navimenu, 0, "Arbeistamt");
+/*AddMenuItem(teleportmenu, 0, "LS");
+AddMenuItem(teleportmenu, 0, "SF");
+AddMenuItem(teleportmenu, 0, "SF");
+AddMenuItem(teleportmenu, 0, "LV");
+AddMenuItem(teleportmenu, 0, "LV");
+*/
+/*AddMenuItem(teleportmenu, 1, "Grove Street");
+AddMenuItem(teleportmenu, 1, "Starfish Tower");
+AddMenuItem(teleportmenu, 1, "Wheel Arch Angels");
+AddMenuItem(teleportmenu, 1, "Jizzys");
+AddMenuItem(teleportmenu, 1, "4 Dragons");
+AddMenuItem(teleportmenu, 1, "Come-a-Lot");*/
+ConnectNPC("Zivi","Zivi");
 DisableAllStreamedMapIcons();
 SetGameModeText("Blank Script");
 UsePlayerPedAnims();
-ShowNameTags(10);
-SetNameTagDrawDistance(40.0);
+//SetNameTagDrawDistance(40.0);
 EnableStuntBonusForAll(0);
-//DisableInteriorEnterExits();
+DisableInteriorEnterExits();
 SetTimer("payday",100000,1);
-ShowPlayerMarkers(0);
 //SetTimer("Speedometer", 100, true);
 new MySQL:connection = mysql_init(LOG_ALL, 0);
 mysql_connect(DB_HOST,DB_USER, DB_PW, DB_NAME,connection);
-
+CreateObject(4550, 158.06913757324, -1667.8994140625, 85.795448303223, 0, 0, 0);
+CreateObject(4550, 158.068359375, -1667.8994140625, 240.79544067383, 0, 0, 0);
+CreateObject(4726, 158.2546081543, -1668.4096679688, 450.89190673828, 0, 0, 0);
+CreateObject(4727, 158.34448242188, -1668.3406982422, 451.20001220703, 0, 0, 0);
+CreateObject(1522, 185.7370300293, -1653.1131591797, 13.800000190735, 0, 0, 316);
+CreateObject(1522, 184.38652038574, -1651.814453125, 13.800000190735, 0, 0, 315.99975585938);
+CreateObject(3472, 189.21377563477, -1649.3099365234, 10, 0, 0, 45);
+CreateObject(3461, 186.18280029297, -1649.4368896484, 15.527841567993, 0, 0, 0);
+CreateObject(16777, 139.19212341309, -1586.6423339844, 10.39999961853, 0, 0, 97);
+CreateObject(3406, 183.74325561523, -1656.2143554688, 11.800000190735, 0, 0, 225);
+CreateObject(3406, 190.30841064453, -1649.7514648438, 11.800000190735, 0, 0, 45);
+CreateObject(3406, 182.24008178711, -1654.8790283203, 11.800000190735, 0, 0, 225);
+CreateObject(3406, 188.81413269043, -1648.2174072266, 11.800000190735, 0, 0, 44.994506835938);
+CreateObject(3461, 189.11180114746, -1652.3619384766, 15.527841567993, 0, 0, 0);
+CreateObject(3461, 192.21974182129, -1649.2713623047, 15.527841567993, 0, 0, 0);
+CreateObject(3461, 189.30975341797, -1646.3311767578, 15.527841567993, 0, 0, 0);
+CreateObject(8040, 203.9587097168, -1790.9768066406, 4.5, 0, 0, 180);
+CreateObject(4639, 165.79641723633, -1782.6892089844, 5.4309549331665, 0, 0, 0);
+CreateObject(4642, 165.05046081543, -1798.1539306641, 5.4385824203491, 0, 0, 90);
+CreateObject(4642, 165.04483032227, -1794.5786132813, 5.4385824203491, 0, 0, 90);
+CreateObject(4639, 165.76571655273, -1791.7824707031, 5.4385824203491, 0, 0, 0);
+CreateObject(1696, 161.72659301758, -1786.1143798828, 3.160001039505, 350, 0, 270);
+CreateObject(1696, 161.72598266602, -1787.9339599609, 3.160001039505, 349.99694824219, 0, 270);
+CreateObject(8841, 202.70848083496, -1791.0499267578, 6.6999998092651, 0, 0, 0);
+CreateObject(15025, 160.76347351074, -1671.6300048828, 25, 0, 0, 0);
+CreateObject(15029, 160.44967651367, -1671.3631591797, 30, 0, 0, 0);
+CreateObject(15029, 160.44921875, -1671.3623046875, 25, 0, 0, 0);
+CreateObject(15025, 160.7626953125, -1671.6298828125, 30, 0, 0, 0);
+CreateObject(15029, 160.44921875, -1671.3623046875, 65, 0, 0, 0);
+CreateObject(15029, 160.44921875, -1671.3623046875, 60, 0, 0, 0);
+CreateObject(15029, 160.44921875, -1671.3623046875, 55, 0, 0, 0);
+CreateObject(15029, 160.44921875, -1671.3623046875, 50, 0, 0, 0);
+CreateObject(15029, 160.44921875, -1671.3623046875, 45, 0, 0, 0);
+CreateObject(15029, 160.44921875, -1671.3623046875, 40, 0, 0, 0);
+CreateObject(15029, 160.44921875, -1671.3623046875, 35, 0, 0, 0);
+CreateObject(15025, 160.7626953125, -1671.6298828125, 60, 0, 0, 0);
+CreateObject(15025, 160.7626953125, -1671.6298828125, 55, 0, 0, 0);
+CreateObject(15025, 160.7626953125, -1671.6298828125, 50, 0, 0, 0);
+CreateObject(15025, 160.7626953125, -1671.6298828125, 45, 0, 0, 0);
+CreateObject(15025, 160.7626953125, -1671.6298828125, 40, 0, 0, 0);
+CreateObject(15025, 160.7626953125, -1671.6298828125, 35, 0, 0, 0);
+CreateObject(15025, 160.7626953125, -1671.6298828125, 65, 0, 0, 0);
+CreateObject(3089, 154.82661437988, -1670.4754638672, 59.5, 0, 0, 90);
+CreateObject(3089, 154.826171875, -1670.474609375, 64.5, 0, 0, 90);
+CreateObject(3089, 154.826171875, -1670.474609375, 29.5, 0, 0, 90);
+CreateObject(3089, 154.826171875, -1670.474609375, 34.5, 0, 0, 90);
+CreateObject(3089, 154.826171875, -1670.474609375, 39.5, 0, 0, 90);
+CreateObject(3089, 154.826171875, -1670.474609375, 44.5, 0, 0, 90);
+CreateObject(3089, 154.826171875, -1670.474609375, 49.5, 0, 0, 90);
+CreateObject(3089, 154.826171875, -1670.474609375, 54.5, 0, 0, 90);
+CreateObject(3089, 154.826171875, -1670.474609375, 24.5, 0, 0, 90);
+CreateObject(14595, 174.41102600098, -1675.8975830078, -1.0901985168457, 0, 0, 0);
+CreateObject(3089, 173.64363098145, -1662.7166748047, -3.7143211364746, 0, 0, 0);
+CreateObject(3089, 163.08688354492, -1680.8228759766, -3.7143211364746, 0, 0, 0);
+CreateObject(3089, 149.30368041992, -1680.9982910156, -3.8995428085327, 0, 0, 0);
+CreateObject(2605, 180.01472473145, -1678.9389648438, -4.6448860168457, 0, 0, 90);
+CreateObject(2607, 180.57627868652, -1677.5146484375, -4.6476392745972, 0, 0, 180);
+CreateObject(2605, 182.5361328125, -1677.5439453125, -4.6448860168457, 0, 0, 0);
+CreateObject(2356, 181.02500915527, -1678.7631835938, -5.0433235168457, 0, 0, 120);
+CreateObject(2356, 182.71200561523, -1678.4752197266, -5.0433235168457, 0, 0, 30);
+CreateObject(2309, 182.77085876465, -1676.2154541016, -5.0433235168457, 0, 0, 180);
+CreateObject(2309, 182.12454223633, -1676.2316894531, -5.0433235168457, 0, 0, 179.99450683594);
+CreateObject(2309, 178.77137756348, -1679.2272949219, -5.0433235168457, 0, 0, 270);
+CreateObject(2309, 178.8088684082, -1678.5124511719, -5.0433235168457, 0, 0, 270);
+CreateObject(1724, 176.85807800293, -1669.4525146484, -5.0433235168457, 0, 0, 270);
+CreateObject(1724, 176.85795593262, -1668.2744140625, -5.0433235168457, 0, 0, 270);
+CreateObject(1724, 176.84873962402, -1667.09765625, -5.0433235168457, 0, 0, 270);
+CreateObject(1724, 176.84664916992, -1665.9449462891, -5.0433235168457, 0, 0, 270);
+CreateObject(5422, 177.47311401367, -1688.0194091797, -3.0309562683105, 0, 0, 0);
 Loadobject();
 Loadvehicles();
 Loadplayerclass();
 LoadBlizter();
+SetTimer("settime",1000,true);
+Date = TextDrawCreate(547.000000,11.000000,"--");
+TextDrawFont(Date,3);
+TextDrawLetterSize(Date,0.399999,1.600000);
+TextDrawColor(Date,0xffffffff);
+Time = TextDrawCreate(547.000000,28.000000,"--");
+TextDrawFont(Time,3);
+TextDrawLetterSize(Time,0.399999,1.600000);
+TextDrawColor(Time,0xffffffff);
+SetTimer("Worldtime",1000,true);
 return 1;
 }
 
+forward TimeUpdate();
+new worldTime;
 
+public TimeUpdate() {
+    worldTime++;
+    worldTime%=24;
+    SetWorldTime(worldTime);
+}
+#define COLOR_YELLOW 0xFFFF00AA
+#define COLOR_YELLOW2 0xF5DEB3AA
 public OnGameModeExit()
 {
 mysql_close();
@@ -197,15 +325,26 @@ SpawnPlayer(playerid);
 }
 return 1;
 }
+stock Tutrial() {
+for (new i = 0; i < MAX_PLAYERS; i++) {
+SendClientMessage(i,0xFFFF00FF,"Payday! Du Erhalst §%d!",paydaymondey);
+GivePlayerMoney(i,paydaymondey);
+}
+return 1;
+}
 stock payday() {
 for (new i = 0; i < MAX_PLAYERS; i++) {
-SendClientMessage(i,0xFFFF00FF,"Payday! Du erhÃ¤ltst §%s!",paydaymondey);
+SendClientMessage(i,0xFFFF00FF,"Payday! Du Erhalst §%d!",paydaymondey);
 GivePlayerMoney(i,paydaymondey);
 }
 return 1;
 }
 public OnPlayerConnect(playerid)
 {
+GetPlayerName(playerid, gPlayerName[playerid], MAX_PLAYER_NAME);
+GetPlayerIp(playerid,gPlayerIP[playerid],16);
+timebancheck(playerid);
+F_Streamer_OnPlayerConnect(playerid);
 MySQL_Player_Exist(playerid);
 if(ergebniss[playerid][Playerexis]==1)
 {
@@ -215,13 +354,24 @@ else
 {
 ShowPlayerDialog(playerid,DIALOG_Register,DIALOG_STYLE_INPUT,regtitle,regtext,reg_Button1,reg_Button2);
 }
+if(IsPlayerNPC(playerid))
+{
+new botname[MAX_PLAYER_NAME];
+GetPlayerName(playerid, botname, sizeof(botname));
+if(!strcmp(botname, "Zivi", true))
+{
+                                 PlayerInfo[playerid][Logged]=1;//Der Bot ist gleich eingeloggt (Anpassen!)
+}
+}
 return 1;
 }
 
 public OnPlayerDisconnect(playerid, reason)
 {
+TextDrawHideForPlayer(playerid, Time), TextDrawHideForPlayer(playerid, Date);
 savewaepons(playerid);
 MySQL_Player_SAVE(playerid);
+//accountLogged(playerid);
 //Player_save_Data(playerid);
 resetewapons(playerid);
 resetvaris(playerid);
@@ -230,6 +380,18 @@ return 1;
 
 public OnPlayerSpawn(playerid)
 {
+//timebancheck(playerid);
+if(IsPlayerNPC(playerid))
+{
+new botname[MAX_PLAYER_NAME];
+GetPlayerName(playerid, botname, sizeof(botname));
+if(!strcmp(botname, "Zivi", true))
+{
+SetPlayerSkin(playerid,173);
+                      //Hier den Bot sachen geben, wie Waffen oder Ähnliches
+}
+  }
+
 new neu;
 neu  = GetPlayerSkin(playerid);
 
@@ -241,15 +403,17 @@ if(PlayerInfo[playerid][playerskin] == 0)
 SendClientMessage(playerid,COLOR_WHITE,"Dieser skin ist Verboten");
 SetPlayerHealth(playerid,0);
 }
+TextDrawShowForPlayer(playerid, Time), TextDrawShowForPlayer(playerid, Date);
+accountLogged(playerid);
 return 1;
 }
 public OnPlayerDeath(playerid, killerid, reason)
 {
+
 PlayerInfo[killerid][pKills]++;
 PlayerInfo[playerid][pDeaths]++;
 return 1;
 }
-
 public OnVehicleSpawn(vehicleid)
 {
 return 1;
@@ -266,9 +430,21 @@ return 1;
 }
 public OnPlayerCommandText(playerid, cmdtext[])
 {
+//dcmd(kick,4,cmdtext);
 dcmd(spawn,5,cmdtext);
+dcmd(spawn_car,9,cmdtext);
 dcmd(helptype,8,cmdtext);
 dcmd(kartbahn,8,cmdtext);
+dcmd(tele,4,cmdtext);
+dcmd(coords,6,cmdtext);
+dcmd(teleport,8,cmdtext);
+dcmd(teleadd,7,cmdtext);
+dcmd(teledel,7,cmdtext);
+dcmd(delc,4,cmdtext);
+dcmd(addc,4,cmdtext);
+dcmd(navi,4,cmdtext);
+dcmd(timeban,7,cmdtext);
+dcmd(unban,5,cmdtext);
 return 0;
 }
 
@@ -282,18 +458,147 @@ public OnPlayerExitVehicle(playerid, vehicleid)
 {
 return 1;
 }
+dcmd_spawn(playerid,params[]) {
+new Float:x,Float:y,Float:z,Float:ang;
+new color1,color2,model;
+if(PlayerInfo[playerid][pIsLogin] == false) return 1;
+if(PlayerInfo[playerid][AdminLevel] > 1)
+{
+if(sscanf(params, "iii",color1,color2,model)) {
+return SendClientMessage(playerid,COLOR_WHITE,"USAGE: /spawn  color1 color2 model");
+}
+GetPlayerPos(playerid,Float:x,Float:y,Float:z);
+GetPlayerFacingAngle(playerid,Float:ang);
+CreateVehicle(model,x,y,z,ang,color1,color2,-1);
+}
+return 1;
+}
 dcmd_helptype(playerid,params[]) {
+if(PlayerInfo[playerid][pIsLogin] == false) return 1;
+if(PlayerInfo[playerid][AdminLevel] > 1)
+{
 new helptypi;
 if(sscanf(params, "i",helptypi)) {
 return SendClientMessage(playerid,COLOR_WHITE,"Auto = 1 Boot = 2 Flugzeug = 3 Lastwagen = 4 Motorrad = 5");
 }
+}
 return 1;
 }
-dcmd_spawn(playerid,params[]) {
+dcmd_navi(playerid,params[]){
+if(PlayerInfo[playerid][pIsLogin] == false) return 1;
+//ShowPlayerDialog(playerid, List, DIALOG_STYLE_LIST, "Opciones", "Armas\nAutos", "Seleccionar", "Cancelar");
+ShowMenuForPlayer(Navimenu,playerid);
+SetTimer("Tutrial",10,1);
+return 1;
+}
+dcmd_delc(playerid,params[]){
+if(PlayerInfo[playerid][pIsLogin] == false) return 1;
+DisablePlayerCheckpoint(playerid);
+return 1;
+}
+dcmd_addc(playerid,params[]){
+if(PlayerInfo[playerid][pIsLogin] == false) return 1;
+SetPlayerCheckpoint(playerid, 1480.201049, -1770.545043, 18.795755, 3.0);
+return 1;
+}
+dcmd_teleadd(playerid,params[]) {
+if(PlayerInfo[playerid][pIsLogin] == false) return 1;
+if(PlayerInfo[playerid][AdminLevel] > 1)
+{
+new lvl;
+new araname[64];
+new Float:x,Float:y,Float:z,Float:ang;
+if(sscanf(params, "s[64]i",araname,lvl)) {
+return SendClientMessage(playerid,COLOR_WHITE,"USAGE: /teleadd name adminlevel");
+}
+GetPlayerPos(playerid,Float:x,Float:y,Float:z);
+GetPlayerFacingAngle(playerid,Float:ang);
+format(addloc,sizeof(addloc), "INSERT INTO `teleport_coords` ( pos_x,pos_y,pos_z,pos_r,AreaName,AdminLevel) VALUES ('%f','%f','%f','%f','%s','%i')",x,y,z,ang,araname,lvl);
+mysql_query(addloc);
+SendClientMessage(playerid,COLOR_WHITE,"Erfolgreich Hinzugefügt");
+mysql_free_result();
+}
+return 1;
+}
+dcmd_teleport(playerid,params[])
+{
+if(PlayerInfo[playerid][pIsLogin] == false) return 1;
+//if(PlayerInfo[playerid][AdminLevel] > 1)
+//new Area_tele[64];
+if(sscanf(params, "s[64]",Area_tele))  {
+return SendClientMessage(playerid,COLOR_WHITE,"USAGE: /teleport Locazion");
+}
+{
+//return SendClientMessage(playerid,COLOR_WHITE,"USAGE: /teleport Areaname");
+new Float:pos_x_tele,Float:pos_y_tele,Float:pos_z_tele;
+//new Float:pos_r_tele;
+//new AdminLevel_tele;
+format(teleportcoords,sizeof(teleportcoords),"SELECT * FROM `teleport_coords` WHERE `AreaName`= '%s' LIMIT 1;",Area_tele);
+mysql_query(teleportcoords);
+mysql_store_result();
+if(mysql_num_rows() == 1)
+{
+mysql_fetch_field("pos_x",teleportcoords); pos_x_tele = floatstr(teleportcoords);
+mysql_fetch_field("pos_y",teleportcoords); pos_y_tele = floatstr(teleportcoords);
+mysql_fetch_field("pos_z",teleportcoords); pos_z_tele = floatstr(teleportcoords);
+//mysql_fetch_field("pos_r",teleportcoords); pos_r_tele = floatstr(teleportcoords);
+//mysql_fetch_field("AdminLevel",teleportcoords); AdminLevel_tele = strval(teleportcoords);
+//mysql_fetch_field("AreaName",teleportcoords); AreaName_tele = strval(teleportcoords);
+}
+SetPlayerPos(playerid,pos_x_tele,pos_y_tele,pos_z_tele);
+/*if(AdminLevel_tele < PlayerInfo[playerid][AdminLevel])
+{
+SetPlayerPos(playerid,pos_x_tele,pos_y_tele,pos_z_tele);
+return 1;
+}
+if(mysql_num_rows() == 0)
+{
+SendClientMessage(playerid,COLOR_WHITE,"teleport Areanem not found");
+}*/
+mysql_free_result();
+return 1;
+}
+}
+dcmd_teledel(playerid,params[]) {
+if(PlayerInfo[playerid][pIsLogin] == false) return 1;
+if(PlayerInfo[playerid][AdminLevel] > 1)
+{
+new araname[64];
+if(sscanf(params, "s[64]",araname)) {
+return SendClientMessage(playerid,COLOR_WHITE,"USAGE: /teleadel name ");
+}
+format(delloc,sizeof(delloc), "DELETE FROM teleport_coords WHERE `AreaName`= '%s'",araname);
+mysql_query(delloc);
+if(mysql_num_rows() == 1)
+{
+
+SendClientMessage(playerid,COLOR_WHITE,"teleport Locazion Erfolgreich Gelöscht");
+return 1;
+}
+else
+{
+SendClientMessage(playerid,COLOR_WHITE,"Löschung Fehlgeschlagen");
+mysql_free_result();
+return 1;
+}
+}
+return 1;
+}
+
+/*
+	Resume Command
+	Usage: /resume
+	Description: Used to resume a paused round.
+	Access: Administrators
+*/
+dcmd_spawn_car(playerid,params[]) {
+if(PlayerInfo[playerid][pIsLogin] == false) return 1;
+if(PlayerInfo[playerid][AdminLevel] > 1)
+{
 new Float:x,Float:y,Float:z,Float:ang;
 new type,color1,color2,model;
 if(sscanf(params, "iiii",type,color1,color2,model)) {
-return SendClientMessage(playerid,COLOR_WHITE,"USAGE: /spawn type color1 color2 model");
+return SendClientMessage(playerid,COLOR_WHITE,"USAGE: /spawn_car type color1 color2 model");
 }
 GetPlayerPos(playerid,Float:x,Float:y,Float:z);
 GetPlayerFacingAngle(playerid,Float:ang);
@@ -301,14 +606,71 @@ format(insertvihcles,sizeof(insertvihcles), "INSERT INTO `vehicles` (modelid, po
 mysql_query(insertvihcles);
 CreateVehicle(model,x,y,z,ang,type,color1,color2);
 printf(" %f %f %f %f %i %i %i %i",x,y,z,ang,type,color1,color2,model);
+mysql_free_result();
+}
 return 1;
 }
-
+dcmd_coords(playerid,params[]) {
+if(PlayerInfo[playerid][pIsLogin] == false) return 1;
+if(PlayerInfo[playerid][AdminLevel] > 1)
+{
+new comment[64];
+new Float:x,Float:y,Float:z,Float:ang;
+if(sscanf(params, "s[64]",comment)) {
+return SendClientMessage(playerid,COLOR_WHITE,"USAGE: /coords comment");
+}
+GetPlayerPos(playerid,Float:x,Float:y,Float:z);
+GetPlayerFacingAngle(playerid,Float:ang);
+format(insertvihcles,sizeof(insertvihcles), "INSERT INTO `coords` ( pos_x,pos_y,pos_z,pos_r,comments) VALUES ('%f','%f','%f','%f','%s')",x,y,z,ang,comment);
+mysql_query(insertvihcles);
+SendClientMessage(playerid,COLOR_WHITE,"command ausgefürt");
+mysql_free_result();
+}
+return 1;
+}
+dcmd_tele(playerid, params[]){
+if(PlayerInfo[playerid][pIsLogin] == false) return 1;
+//199.8784,-1644.7742,14.0000
+#pragma unused params
+SetPlayerPos(playerid,199.8784,-1644.7742,14.0000);
+return 1;
+}
 dcmd_kartbahn(playerid, params[]) {
+if(PlayerInfo[playerid][pIsLogin] == false) return 1;
 #pragma unused params
 SetPlayerPos(playerid, -2043.3737, -115.5196, 35.2112);
 return 1;
 }
+/*dcmd_unban(playerid,params[])
+{
+new query[MAX_QUERY];
+new unbanname[MAX_PLAYER_NAME];
+if(sscanf(params,"s[24]",unbanname)) return SendClientMessage(playerid,COLOR_YELLOW,"Benutzung. /unban [NAME]");
+//	if(Spieler[playerid][pAdmin] < 1) return SendClientMessage(playerid,COLOR_RED,"Du bist kein Admin");
+format(query,sizeof(query),"DELETE FROM timeban WHERE `Name`= '%s'",unbanname);
+mysql_query(query);
+return 1;
+}*/
+
+dcmd_timeban(playerid,params[])
+{
+	new pid,
+	grund[128],dauer;
+	if(sscanf(params,"uds[128]",pid,dauer,grund)) return SendClientMessage(playerid,COLOR_YELLOW,"Benutzung:/timeban [ID][Dauer][GRUND]");
+//	if(Spieler[playerid][pAdmin] < 1) return SendClientMessage(playerid,COLOR_RED,"Du bist kein Admin");
+	if(!IsPlayerConnected(pid)) return SendClientMessage(playerid,COLOR_RED,"Kein Spieler mit der angegebenen ID ist Online");
+	new string[128],
+	string2[128];
+	format(string,sizeof(string),"Du wurdest fÃ¼r %d Minuten vom Server gebannt Grund:%s",dauer,grund);
+	format(string2,sizeof(string),"Du hast %s fÃ¼r %d Minuten vom Server gebannt",gPlayerName[pid],dauer);
+	SendClientMessage(pid,COLOR_RED,string);
+	SendClientMessage(playerid,COLOR_RED,string2);
+	Kick(pid);
+	new zeitdauer=Now()+dauer*60;
+	timebanplayer(gPlayerName[pid],grund,gPlayerIP[pid],gPlayerName[playerid],zeitdauer);
+	return 1;
+}
+
 public OnPlayerStateChange(playerid, newstate, oldstate)
 {
 /*
@@ -353,6 +715,7 @@ return 1;
 
 public OnPlayerEnterCheckpoint(playerid)
 {
+DisablePlayerCheckpoint(playerid);
 return 1;
 }
 
@@ -414,6 +777,18 @@ return 1;
 
 public OnPlayerSelectedMenuRow(playerid, row)
 {
+new Menu:CurrentMenu = GetPlayerMenu(playerid);
+if(CurrentMenu == Navimenu)
+{
+    switch(row)
+    {
+case 0: //Arbeistamt
+{
+SetPlayerCheckpoint(playerid, 1480.201049, -1770.545043, 18.795755, 3.0);
+SendClientMessage(playerid, 0xFFFFFFFF, "Checkpoint Zum Arbeitsamt würde gesezt");
+}
+}
+}
 return 1;
 }
 
@@ -478,6 +853,7 @@ mysql_free_result();
 }*/
 public OnDialogResponse(playerid, dialogid, response, listitem, inputtext[])
 {
+
 if(dialogid==DIALOG_LOGIN)
 {
 if(response==0)
@@ -544,7 +920,7 @@ stock Loadobject()
 {
 
 new modelid;
-new Float:pos_ox, Float:pos_oy, Float:pos_oz,Float:pos_rx, Float:pos_ry, Float:pos_rz;
+new Float:pos_ox, Float:pos_oy, Float:pos_oz,Float:pos_rx, Float:pos_ry, Float:pos_rz,Float:distanz;
 
 format(objectsql,sizeof(objectsql),"SELECT COUNT(*) FROM object");
 mysql_query(objectsql);
@@ -565,14 +941,17 @@ mysql_fetch_field("pos_z",objectsql); pos_oz = floatstr(objectsql);
 mysql_fetch_field("pos_rx",objectsql); pos_rx = floatstr(objectsql);
 mysql_fetch_field("pos_ry",objectsql); pos_ry = floatstr(objectsql);
 mysql_fetch_field("pos_rz",objectsql); pos_rz = floatstr(objectsql);
+mysql_fetch_field("distanz",objectsql); distanz = floatstr(objectsql);
 //mysql_free_result();
 }
 if (mysql_num_rows() > 0)
 {
-CreateObject(modelid,pos_ox,pos_oy,pos_oz,pos_rx,pos_ry,pos_rz);
-printf("object %d pos_x %f pos_y %f pos_z %f pos_rx %f pos_ry %f pos_rz",modelid,pos_ox,pos_oy,pos_oz,pos_rx,pos_ry,pos_rz);
+//CreateObject(modelid,pos_ox,pos_oy,pos_oz,pos_rx,pos_ry,pos_rz);
+printf("object %d pos_x %f pos_y %f pos_z %f pos_rx %f pos_ry %f pos_rz distanz %f",modelid,pos_ox,pos_oy,pos_oz,pos_rx,pos_ry,pos_rz,distanz);
+F_CreateObject(modelid, pos_ox, pos_oy, pos_oz, pos_rx, pos_ry, pos_rz,distanz);
 }
 }
+mysql_free_result();
 }
 stock Loadvehicles()
 {
@@ -701,12 +1080,17 @@ return 1;
 stock MySQL_Player_SAVE(playerid)
 {
 if(PlayerInfo[playerid][pIsLogin] == false) return 1;
+
 format(saveplayer1,sizeof(saveplayer1),"UPDATE `players` SET ");
 format(Updateplayer,sizeof(Updateplayer),"`Money`=%d,",PlayerInfo[playerid][pCash]);
 strcat(saveplayer1,Updateplayer,sizeof(saveplayer1));
 format(Updateplayer,sizeof(Updateplayer),"`Kills`=%d,",PlayerInfo[playerid][pKills]);
 strcat(saveplayer1,Updateplayer,sizeof(saveplayer1));
 format(Updateplayer,sizeof(Updateplayer),"`Deaths`=%d,",PlayerInfo[playerid][pDeaths]);
+strcat(saveplayer1,Updateplayer,sizeof(saveplayer1));
+format(Updateplayer,sizeof(Updateplayer),"`Logged`=0,");
+strcat(saveplayer1,Updateplayer,sizeof(saveplayer1));
+format(Updateplayer,sizeof(Updateplayer),"`playerid`=0,");
 strcat(saveplayer1,Updateplayer,sizeof(saveplayer1));
 format(Updateplayer,sizeof(Updateplayer),"`skin`=%d,",PlayerInfo[playerid][playerskin]);
 strcat(saveplayer1,Updateplayer,sizeof(saveplayer1));
@@ -874,6 +1258,7 @@ SendClientMessage(playerid,COLOR_WHITE,"Login Erfolgreich");
 //mysql_free_result();
 ergebniss[playerid][Loginergebnis] = 1;
 Loadaccount(playerid);
+//accountLogged(playerid);
 //mysql_free_result();
 }
 else
@@ -933,7 +1318,13 @@ mysql_fetch_field("weapon12_ammo",playersql); Pammo[playerid][ammo12] = strval(p
 mysql_fetch_field("weapon13_ammo",playersql); Pammo[playerid][ammo13] = strval(playersql);
 oSetPlayerMoney(playerid,PlayerInfo[playerid][pCash]);
 PlayerInfo[playerid][pIsLogin] = true;
+PlayerInfo[playerid][Logged] = 1;
 mysql_free_result();
+if(PlayerInfo[playerid][AdminLevel] > 0)
+{
+SendClientMessage(playerid,COLOR_WHITE,"Wilkommen Admin");
+}
+
 return 1;
 }
 stock register_player(playerid,key[])
@@ -1039,7 +1430,7 @@ strcat(saveweapons,Updateweapons,sizeof(saveweapons));
 format(Updateweapons,sizeof(Updateweapons)," WHERE `Name`='%s'",oGetPlayerName(playerid));
 strcat(saveweapons,Updateweapons,sizeof(saveweapons));
 mysql_query(saveweapons);
-mysql_free_result();
+//mysql_free_result();
 return 1;
 }
 stock resetewapons(playerid)
@@ -1073,5 +1464,137 @@ Pammo[playerid][ammo10] = 0;
 Pammo[playerid][ammo11] = 0;
 Pammo[playerid][ammo12] = 0;
 Pammo[playerid][ammo13] = 0;
+return 1;
+}
+stock accountLogged(playerid)
+{
+if(PlayerInfo[playerid][pIsLogin] == false) return 1;
+format(playerloggedsrc,sizeof(playerloggedsrc),"UPDATE `players` SET ");
+format(playerlogged,sizeof(playerlogged),"`Logged`=1,");
+strcat(playerloggedsrc,playerlogged,sizeof(playerloggedsrc));
+format(playerlogged,sizeof(playerlogged),"`playerid`=%d",playerid);
+strcat(playerloggedsrc,playerlogged,sizeof(playerloggedsrc));
+format(playerlogged,sizeof(playerlogged)," WHERE `Name`='%s'",oGetPlayerName(playerid));
+strcat(playerloggedsrc,playerlogged,sizeof(playerloggedsrc));
+mysql_query(playerloggedsrc);
+mysql_free_result();
+return 1;
+}
+stock resetdb()
+{
+return 1;
+}
+public Worldtime(playerid)
+{
+	new string[256],year,month,day,hours,minutes,seconds;
+	getdate(year, month, day), gettime(hours, minutes, seconds);
+	format(string, sizeof string, "%d/%s%d/%s%d", day, ((month < 10) ? ("0") : ("")), month, (year < 10) ? ("0") : (""), year);
+	TextDrawSetString(Date, string);
+	format(string, sizeof string, "%s%d:%s%d:%s%d", (hours < 10) ? ("0") : (""), hours, (minutes < 10) ? ("0") : (""), minutes, (seconds < 10) ? ("0") : (""), seconds);
+	TextDrawSetString(Time, string);
+}
+stock timebancheck(playerid)
+{
+printf("fucnkeion aufruf");
+//	new query[256],
+
+new	timestamp;
+format(Selectban,sizeof(Selectban),"SELECT  *FROM `timeban` WHERE `IP` = '%s' AND `Name` = '%s' LIMIT 1",gPlayerIP[playerid],gPlayerName[playerid]);
+mysql_query(Selectban);
+mysql_store_result();
+if(mysql_num_rows() == 1)
+{
+//	mysql_fetch_field("ID",Selectban); eergebnis=strval(Selectban);
+mysql_fetch_field("Datum",Selectban); timestamp=strval(Selectban);
+}
+if(mysql_num_rows() == 1)
+{
+}
+if(timestamp > Now()&&mysql_num_rows() == 1)
+{
+new string[128];
+new zahl=timestamp-Now();
+zahl=zahl/60;
+format(string,128,"Du bist noch %d Minuten gebannt",zahl);
+SendClientMessage(playerid,COLOR_RED,string);
+return Kick(playerid);
+}
+else
+{
+printf("test2");
+format(Selectban,sizeof(Selectban),"DELETE FROM `timeban` WHERE `IP`='%s' OR `Name`='%s'",gPlayerIP[playerid],gPlayerName[playerid]);
+mysql_query(Selectban);
+}
+mysql_free_result();
+return 1;
+}
+
+//hier auch ganz nach unten die stocks
+stock mktime(hour,minute,second,day,month,year)
+{
+	new timestamp2;
+
+	timestamp2 = second + (minute * 60) + (hour * 3600);
+
+	new days_of_month[12];
+
+	if ( ((year % 4 == 0) && (year % 100 != 0)) || (year % 400 == 0) ) {
+			days_of_month = {31,29,31,30,31,30,31,31,30,31,30,31}; // Schaltjahr
+		} else {
+			days_of_month = {31,28,31,30,31,30,31,31,30,31,30,31}; // keins
+		}
+	new days_this_year = 0;
+	days_this_year = day;
+	if(month > 1) { // No January Calculation, because its always the 0 past months
+		for(new i=0; i<month-1;i++) {
+			days_this_year += days_of_month[i];
+		}
+	}
+	timestamp2 += days_this_year * 86400;
+
+	for(new j=1970;j<year;j++) {
+		timestamp2 += 31536000;
+		if ( ((year % 4 == 0) && (year % 100 != 0)) || (year % 400 == 0) )  timestamp2 += 86400; // Schaltjahr + 1 Tag
+	}
+
+	return timestamp2;
+}
+
+stock Now()
+{
+	new hour,minute,second,year,month,day;
+	gettime(hour, minute, second);
+	getdate(year, month, day);
+	return mktime(hour,minute,second,day,month,year);
+}
+
+stock timebanplayer(nickname[24],grund[128],playerIP[16],admin[24],dauer)
+{
+ 	new query[256];
+	format(query,sizeof(query),"INSERT INTO timeban (Name,Grund,IP,Admin,Datum) VALUES ('%s','%s','%s','%s','%d')",
+	nickname,
+	grund,
+	playerIP,
+	admin,
+	dauer);
+	mysql_query(query);
+	mysql_free_result();
+}
+dcmd_unban(playerid,params[])
+{
+new unbanname[MAX_PLAYER_NAME];
+new ungbann[MAX_QUERY];
+if(sscanf(params,"s[24]",unbanname)) return SendClientMessage(playerid,COLOR_YELLOW,"Benutzung. /unban [NAME]");
+//if(Spieler[playerid][pAdmin] < 1) return SendClientMessage(playerid,COLOR_RED,"Du bist kein Admin");
+format(ungbann,sizeof(ungbann),"DELETE FROM `timeban `Name`='%s'",unbanname);
+mysql_query(ungbann);
+if(mysql_num_rows() == 1)
+{
+SendClientMessage(playerid,COLOR_WHITE,"Erfolgreich Entbannt");
+}
+else
+{
+SendClientMessage(playerid,COLOR_WHITE,"Unban Fehlgeschlägen");
+}
 return 1;
 }
